@@ -4,9 +4,10 @@ services:
   postgres:
     image: postgres:17-alpine
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in Coolify}
-      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in Coolify}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in Coolify}
+      POSTGRES_DB: exam_results
+      POSTGRES_USER: exam_app
+      # Coolify creates one persistent, URL-safe secret and reuses it below.
+      POSTGRES_PASSWORD: ${SERVICE_HEX_64_POSTGRES}
     healthcheck:
       test: ["CMD-SHELL", 'pg_isready -q -h 127.0.0.1 -p 5432 -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
       start_period: 30s
@@ -33,13 +34,15 @@ services:
 
   migrate:
     image: postgres:17-alpine
+    # This one-shot service exits successfully after applying the schema.
+    exclude_from_hc: true
     depends_on:
       postgres:
         condition: service_healthy
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in Coolify}
-      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in Coolify}
-      PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in Coolify}
+      POSTGRES_DB: exam_results
+      POSTGRES_USER: exam_app
+      PGPASSWORD: ${SERVICE_HEX_64_POSTGRES}
       PGHOST: postgres
     volumes:
       - ./apps/api/migrations:/migrations:ro
@@ -62,18 +65,18 @@ services:
     environment:
       APP_ENV: production
       HTTP_ADDR: :8080
-      DATABASE_URL: postgresql://${POSTGRES_USER:?Set POSTGRES_USER in Coolify}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in Coolify}@postgres:5432/${POSTGRES_DB:?Set POSTGRES_DB in Coolify}?sslmode=disable
+      DATABASE_URL: postgresql://exam_app:${SERVICE_HEX_64_POSTGRES}@postgres:5432/exam_results?sslmode=disable
       REDIS_URL: redis://redis:6379/0
-      API_MAX_DB_CONNS: ${API_MAX_DB_CONNS}
-      API_MIN_DB_CONNS: ${API_MIN_DB_CONNS}
-      API_DB_TIMEOUT: ${API_DB_TIMEOUT}
-      API_REQUEST_TIMEOUT: ${API_REQUEST_TIMEOUT}
-      API_MAX_BODY_BYTES: ${API_MAX_BODY_BYTES}
-      API_RATE_LIMIT_MAX: ${API_RATE_LIMIT_MAX}
-      API_RATE_LIMIT_WINDOW: ${API_RATE_LIMIT_WINDOW}
-      API_CACHE_TTL: ${API_CACHE_TTL}
-      API_NEGATIVE_CACHE_TTL: ${API_NEGATIVE_CACHE_TTL}
-      API_CORS_ORIGINS: ${API_CORS_ORIGINS}
+      API_MAX_DB_CONNS: "32"
+      API_MIN_DB_CONNS: "4"
+      API_DB_TIMEOUT: 180ms
+      API_REQUEST_TIMEOUT: 2s
+      API_MAX_BODY_BYTES: "1024"
+      API_RATE_LIMIT_MAX: "60"
+      API_RATE_LIMIT_WINDOW: 1m
+      API_CACHE_TTL: 15m
+      API_NEGATIVE_CACHE_TTL: 30s
+      API_CORS_ORIGINS: https://${SERVICE_FQDN_WEB}
     ports:
       - "127.0.0.1:8080:8080"
     networks:
