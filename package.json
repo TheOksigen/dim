@@ -1,0 +1,11 @@
+{
+  "name": "exam-results-platform",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev:web": "bun --cwd=apps/web run dev",
+    "build": "bun --cwd=apps/web run build && cd apps/api && go build ./...",
+    "typecheck": "bun --cwd=apps/web run typecheck",
+    "test": "cd apps/api && go test ./..."
+  }
+}

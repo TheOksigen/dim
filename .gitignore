@@ -1,0 +1,19 @@
+.DS_Store
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Web build artifacts
+apps/web/node_modules/
+apps/web/.next/
+apps/web/tsconfig.tsbuildinfo
+apps/web/.env
+
+# Go build artifacts
+apps/api/bin/
+apps/api/coverage.out
+
+# Local QA artifacts
+.playwright-cli/
+output/
