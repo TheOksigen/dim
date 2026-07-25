@@ -16,18 +16,21 @@ services:
     image: postgres:17-alpine
     # This one-shot service exits successfully after applying the schema.
     exclude_from_hc: true
-    # Coolify supplies this at runtime with `docker compose --env-file`.
-    # A valueless entry passes it into the container without making it a build arg.
+    # Coolify resolves this from its runtime .env during `docker compose up`.
+    # The empty default keeps the separate build command free of database secrets.
     environment:
-      DATABASE_URL:
+      DATABASE_URL: ${DATABASE_URL:-}
     volumes:
       - ./apps/api/migrations:/migrations:ro
     command:
       - sh
       - -ec
       - |
-        : "$${DATABASE_URL:?DATABASE_URL is required}"
-        exec psql -v ON_ERROR_STOP=1 "$$DATABASE_URL" -f /migrations/0001_exam_results.sql
+        if [ -z "$${DATABASE_URL:-}" ]; then
+          echo >&2 "DATABASE_URL must be configured as a Coolify Runtime Variable"
+          exit 1
+        fi
+        exec env PGCONNECT_TIMEOUT=5 psql -X -w -v ON_ERROR_STOP=1 "$$DATABASE_URL" -f /migrations/0001_exam_results.sql
     restart: "no"
 
   api:
@@ -39,8 +42,8 @@ services:
       redis:
         condition: service_healthy
     environment:
-      # See the migrate service above: this is a runtime-only pass-through.
-      DATABASE_URL:
+      # See the migrate service above: this is a runtime-only value.
+      DATABASE_URL: ${DATABASE_URL:-}
       APP_ENV: production
       HTTP_ADDR: :8080
       REDIS_URL: redis://redis:6379/0

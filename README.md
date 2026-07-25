@@ -26,7 +26,11 @@ docker compose --env-file .env -f docker-compose.yml -f docker-compose.local.yml
 
 ## Coolify və xarici PostgreSQL
 
-`DATABASE_URL` Coolify-də secret kimi təyin edilməlidir; repository-yə yazılmır. Dəyişəni yalnız **Runtime Variable** edin; Build Variable aktiv olmasın. Coolify runtime secret-i `migrate` və API konteynerlərinə ötürür. Xarici PostgreSQL URL istifadə edilirsə, **Connect to Predefined Network** lazım deyil. `migrate` servisi həmin URL ilə `exam_results` cədvəlini idempotent şəkildə yaradır, API isə eyni bazaya read-only bağlantı qurur.
+`DATABASE_URL` Coolify-də secret kimi təyin edilməlidir; repository-yə yazılmır. Dəyişəni yalnız **Runtime Variable** edin; Build Variable və **Use Docker Build Secrets** aktiv olmasın. Coolify runtime `.env`-i Compose interpolationu ilə həm `migrate`, həm API konteynerinə ötürülür.
+
+Ayrı Coolify PostgreSQL resursu üçün hazırkı ən etibarlı seçim həmin resursun **External connection URL**-idir: onu `DATABASE_URL` dəyəri kimi istifadə edin. Raw resource UUID hostunu (məsələn, `u...`) təkbaşına yazmayın; o yalnız düzgün shared Docker şəbəkəsində resolve olunur. Xarici URL istifadə edilirsə **Connect to Predefined Network** lazım deyil. Daxili URL seçilirsə, bu seçim aktiv olmalı və host `postgres-<database-resource-uuid>` formasında yazılmalıdır.
+
+`migrate` servisi URL əlçatan olduqda `exam_results` cədvəlini idempotent şəkildə yaradır, API isə eyni bazaya read-only bağlantı qurur.
 
 ## Yoxlama
 
