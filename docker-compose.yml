@@ -33,8 +33,10 @@ services:
       API_RATE_LIMIT_WINDOW: 1m
       API_CACHE_TTL: 15m
       API_NEGATIVE_CACHE_TTL: 30s
-    ports:
-      - "127.0.0.1:8080:8080"
+    # Coolify's proxy reaches this port over the stack network. Do not publish a
+    # fixed host port here: 8080 can already be occupied by another service.
+    expose:
+      - "8080"
 
 volumes:
   redis_data:

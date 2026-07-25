@@ -38,7 +38,7 @@ Seed heç vaxt API startında işləmir. Eyni əmri yenidən başladanda mövcud
 
 ## Coolify
 
-Coolify-də yalnız `DATABASE_URL`-ni **Runtime Variable** kimi əlavə edin; build secret kimi verməyin. Compose artıq `web` və `migrate` service-lərini işə salmır, buna görə `SERVICE_FQDN_WEB` və `SERVICE_FQDN_API` dəyişənlərinə ehtiyac qalmır. Xarici PostgreSQL üçün Compose `API_DB_TIMEOUT=1s` və `API_REQUEST_TIMEOUT=3s` verir; köhnə `180ms` dəyəri lookup-ları vaxtından əvvəl dayandırır. API domenini Coolify-dən `api.dim.davidjs.dev` olaraq təyin etdikdən sonra Swagger yuxarıdakı ünvanla açılacaq.
+Coolify-də yalnız `DATABASE_URL`-ni **Runtime Variable** kimi əlavə edin; build secret kimi verməyin. Compose artıq `web` və `migrate` service-lərini işə salmır, buna görə `SERVICE_FQDN_WEB` və `SERVICE_FQDN_API` dəyişənlərinə ehtiyac qalmır. Xarici PostgreSQL üçün Compose `API_DB_TIMEOUT=1s` və `API_REQUEST_TIMEOUT=3s` verir; köhnə `180ms` dəyəri lookup-ları vaxtından əvvəl dayandırır. **Domains for api** sahəsinə `https://api.dim.davidjs.dev:8080` yazın: `:8080` Coolify-yə daxili container portunu bildirir, istifadəçilər yenə normal `https://api.dim.davidjs.dev` ilə daxil olur. Swagger yuxarıdakı ünvanla açılacaq.
 
 ## Yoxlama
 
