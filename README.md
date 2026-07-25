@@ -26,7 +26,7 @@ docker compose run --rm --entrypoint /app/seed api -total 10000000 -batch-size 1
 
 ## Coolify və xarici PostgreSQL
 
-`DATABASE_URL` Coolify-də secret kimi təyin edilməlidir; repository-yə yazılmır. Docker Compose servisi üçün **Connect to Predefined Network** seçimini aktiv edin ki, verilən PostgreSQL-in daxili host adı əlçatan olsun. `DATABASE_URL` dəyişəninin Build və Runtime seçimlərini aktiv saxlayın. `migrate` servisi həmin URL ilə `exam_results` cədvəlini idempotent şəkildə yaradır, API isə eyni bazaya read-only bağlantı qurur.
+`DATABASE_URL` Coolify-də secret kimi təyin edilməlidir; repository-yə yazılmır. Dəyişəni yalnız **Runtime Variable** edin; Build Variable aktiv olmasın. Docker Compose servisi üçün **Connect to Predefined Network** seçimini aktiv edin ki, verilən PostgreSQL-in daxili host adı əlçatan olsun. `migrate` servisi həmin URL ilə `exam_results` cədvəlini idempotent şəkildə yaradır, API isə eyni bazaya read-only bağlantı qurur.
 
 ## Yoxlama
 
