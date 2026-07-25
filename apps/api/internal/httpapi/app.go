@@ -12,8 +12,8 @@ import (
 	"exam-results-platform/api/internal/config"
 	"exam-results-platform/api/internal/results"
 
+	swaggo "github.com/gofiber/contrib/v3/swaggo"
 	"github.com/gofiber/fiber/v3"
-	"github.com/gofiber/fiber/v3/middleware/cors"
 	"github.com/gofiber/fiber/v3/middleware/limiter"
 	"github.com/gofiber/fiber/v3/middleware/recover"
 )
@@ -61,12 +61,6 @@ func New(cfg config.Config, repository *results.Repository, redisCache *cache.Re
 	})
 
 	app.Use(recover.New())
-	app.Use(cors.New(cors.Config{
-		AllowOrigins: commaSeparated(cfg.CORSOrigins),
-		AllowMethods: []string{fiber.MethodPost, fiber.MethodGet, fiber.MethodOptions},
-		AllowHeaders: []string{"Content-Type", "X-Request-Id"},
-		MaxAge:       600,
-	}))
 	app.Use(func(c fiber.Ctx) error {
 		c.Set("Cache-Control", "no-store, private")
 		c.Set("Pragma", "no-cache")
@@ -76,6 +70,18 @@ func New(cfg config.Config, repository *results.Repository, redisCache *cache.Re
 
 	app.Get("/healthz", handler.liveness)
 	app.Get("/readyz", handler.readiness)
+	app.Get("/openapi.json", handler.openAPISpec)
+	app.Get("/docs", func(c fiber.Ctx) error {
+		return c.Redirect().Status(fiber.StatusTemporaryRedirect).To("/docs/index.html")
+	})
+	app.Get("/docs/doc.json", handler.openAPISpec)
+	app.Get("/docs/*", swaggo.New(swaggo.Config{
+		Title:                  "İmtahan Nəticələri API",
+		URL:                    "/openapi.json",
+		DocExpansion:           "list",
+		DisplayRequestDuration: true,
+		ValidatorUrl:           "none",
+	}))
 
 	lookupRateLimit := limiter.New(limiter.Config{
 		Max:        cfg.RateLimitMax,
@@ -87,17 +93,6 @@ func New(cfg config.Config, repository *results.Repository, redisCache *cache.Re
 	app.Post("/api/v1/results/lookup", lookupRateLimit, handler.lookup)
 
 	return app
-}
-
-func commaSeparated(value string) []string {
-	parts := strings.Split(value, ",")
-	values := make([]string, 0, len(parts))
-	for _, part := range parts {
-		if trimmed := strings.TrimSpace(part); trimmed != "" {
-			values = append(values, trimmed)
-		}
-	}
-	return values
 }
 
 func (a *App) liveness(c fiber.Ctx) error {

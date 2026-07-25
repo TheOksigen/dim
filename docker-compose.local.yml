@@ -1,8 +1,4 @@
 services:
-  migrate:
-    environment:
-      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
-
   api:
     environment:
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}

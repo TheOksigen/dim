@@ -1,36 +1,44 @@
-# İmtahan nəticələrinin yoxlanılması
+# İmtahan nəticələri API
 
-Bun ilə işləyən SSR Next.js interfeysi, Go Fiber hot-path API-si, xarici PostgreSQL mənbə bazası və Redis cache-aside qatı.
+Yalnız Go Fiber backend: PostgreSQL-dən FIN kodu ilə nəticə oxuyur, Redis ilə cache edir və Swagger UI təqdim edir. Frontend yoxdur.
 
-## Lokal işə salma
+## API və Swagger
 
-~~~sh
-cp .env.example .env
-# .env-də DATABASE_URL-ni əlçatan PostgreSQL instansına uyğunlaşdırın.
-docker compose --env-file .env -f docker-compose.yml -f docker-compose.local.yml up --build
+- Swagger UI: `https://api.dim.davidjs.dev/docs/index.html`
+- OpenAPI JSON: `https://api.dim.davidjs.dev/openapi.json`
+- Canlılıq: `GET /healthz`
+- Hazırlıq: `GET /readyz`
+- Nəticə axtarışı: `POST /api/v1/results/lookup`
+
+~~~json
+{ "finCode": "T000000" }
 ~~~
 
-Sistem ilk işə düşəndə sxem avtomatik tətbiq edilir. Sintetik məlumat ayrıca yüklənir; API startında heç vaxt seed edilmir:
+## Lokal seed və işə salma
 
-> Diqqət: seed əmri `DATABASE_URL`-də göstərilən bazaya yazır. İstehsal bazasında yalnız sintetik məlumatı qəsdən yükləmək istədikdə işlədin.
+`apps/api/.env` yaradın və yalnız lokal/external PostgreSQL URL-ni ora yazın. Bu fayl git-ə daxil edilmir.
 
 ~~~sh
-# sürətli yoxlama üçün
-docker compose --env-file .env -f docker-compose.yml -f docker-compose.local.yml run --rm --entrypoint /app/seed api -total 10000
+cp apps/api/.env.example apps/api/.env
+cd apps/api
 
-# tam test həcmi üçün
-docker compose --env-file .env -f docker-compose.yml -f docker-compose.local.yml run --rm --entrypoint /app/seed api -total 10000000 -batch-size 10000
+# Cədvəl ilk dəfə yaradılırsa, bir dəfə tətbiq edin.
+psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f migrations/0001_exam_results.sql
+
+# 10 milyon sintetik nəticəni əlavə edin.
+go run ./cmd/seed -total=10000000 -batch-size=10000
+
+# API-ni başladın.
+go run ./cmd/api
 ~~~
 
-İlk sintetik FIN `T000000` olur. Web: http://localhost:3000, API liveness: http://localhost:8080/healthz.
+Seed heç vaxt API startında işləmir. Eyni əmri yenidən başladanda mövcud sintetik sıra yoxlanılır və qaldığı yerdən davam edir. `--truncate` bütün `exam_results` cədvəlini silir; adi seed üçün istifadə etməyin.
 
-## Coolify və xarici PostgreSQL
+İlk test FIN-i `T000000`-dır. 10 milyon sıra üçün PostgreSQL-də bir neçə GB boş disk sahəsi olmalıdır.
 
-`DATABASE_URL` Coolify-də secret kimi təyin edilməlidir; repository-yə yazılmır. Dəyişəni yalnız **Runtime Variable** edin; Build Variable və **Use Docker Build Secrets** aktiv olmasın. Coolify runtime `.env`-i Compose interpolationu ilə həm `migrate`, həm API konteynerinə ötürülür.
+## Coolify
 
-Ayrı Coolify PostgreSQL resursu üçün hazırkı ən etibarlı seçim həmin resursun **External connection URL**-idir: onu `DATABASE_URL` dəyəri kimi istifadə edin. Raw resource UUID hostunu (məsələn, `u...`) təkbaşına yazmayın; o yalnız düzgün shared Docker şəbəkəsində resolve olunur. Xarici URL istifadə edilirsə **Connect to Predefined Network** lazım deyil. Daxili URL seçilirsə, bu seçim aktiv olmalı və host `postgres-<database-resource-uuid>` formasında yazılmalıdır.
-
-`migrate` servisi URL əlçatan olduqda `exam_results` cədvəlini idempotent şəkildə yaradır, API isə eyni bazaya read-only bağlantı qurur.
+Coolify-də yalnız `DATABASE_URL`-ni **Runtime Variable** kimi əlavə edin; build secret kimi verməyin. Compose artıq `web` və `migrate` service-lərini işə salmır, buna görə `SERVICE_FQDN_WEB` və `SERVICE_FQDN_API` dəyişənlərinə ehtiyac qalmır. Xarici PostgreSQL üçün Compose `API_DB_TIMEOUT=1s` və `API_REQUEST_TIMEOUT=3s` verir; köhnə `180ms` dəyəri lookup-ları vaxtından əvvəl dayandırır. API domenini Coolify-dən `api.dim.davidjs.dev` olaraq təyin etdikdən sonra Swagger yuxarıdakı ünvanla açılacaq.
 
 ## Yoxlama
 
@@ -38,7 +46,3 @@ Ayrı Coolify PostgreSQL resursu üçün hazırkı ən etibarlı seçim həmin r
 bun run build 2>&1 | tail -n 50
 bun run test
 ~~~
-
-## İstehsal qeydi
-
-60.000–100.000 RPS yalnız WAF/load balancer arxasında üfüqi Fiber replika sayı, yüksək Redis hit nisbəti və PostgreSQL read-replica/topoloji ölçüləndikdə real hədəfdir. Bu Compose faylı funksional lokal topologiyadır, həmin throughput üçün sübut deyil. Real şəxsi nəticələr üçün FIN koduna əlavə identifikasiya, CAPTCHA/WAF rate-limit, Redis TLS/ACL və ayrıca read-only DB rolu tələb olunur.

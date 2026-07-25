@@ -1,0 +1,164 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "İmtahan Nəticələri API",
+    "version": "1.0.0",
+    "description": "Sintetik imtahan nəticələrini FIN kodu ilə yoxlamaq üçün API."
+  },
+  "paths": {
+    "/healthz": {
+      "get": {
+        "tags": ["Sistem"],
+        "summary": "Canlılıq yoxlaması",
+        "responses": {
+          "200": {
+            "description": "Xidmət işləyir",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Status" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/readyz": {
+      "get": {
+        "tags": ["Sistem"],
+        "summary": "Hazırlıq yoxlaması",
+        "responses": {
+          "200": {
+            "description": "PostgreSQL bağlantısı hazırdır",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ReadyStatus" }
+              }
+            }
+          },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
+        }
+      }
+    },
+    "/api/v1/results/lookup": {
+      "post": {
+        "tags": ["Nəticələr"],
+        "summary": "FIN kodu ilə imtahan nəticəsini tapır",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LookupRequest" },
+              "example": { "finCode": "T000000" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Nəticə tapıldı",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LookupResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Status": {
+        "type": "object",
+        "required": ["status"],
+        "properties": { "status": { "type": "string", "example": "ok" } }
+      },
+      "ReadyStatus": {
+        "type": "object",
+        "required": ["status"],
+        "properties": { "status": { "type": "string", "example": "ready" } }
+      },
+      "LookupRequest": {
+        "type": "object",
+        "required": ["finCode"],
+        "properties": {
+          "finCode": {
+            "type": "string",
+            "pattern": "^[A-Z0-9]{7}$",
+            "example": "T000000"
+          }
+        }
+      },
+      "LookupResponse": {
+        "type": "object",
+        "required": ["result"],
+        "properties": {
+          "result": { "$ref": "#/components/schemas/Result" }
+        }
+      },
+      "Result": {
+        "type": "object",
+        "required": ["finCode", "firstName", "lastName", "fatherName", "examDate", "subjects", "totalScore", "passed"],
+        "properties": {
+          "finCode": { "type": "string", "example": "T000000" },
+          "firstName": { "type": "string", "example": "SınaqAd0000" },
+          "lastName": { "type": "string", "example": "DemoSoyad0000" },
+          "fatherName": { "type": "string", "example": "TestAta0000" },
+          "examDate": { "type": "string", "format": "date", "example": "2026-01-01" },
+          "subjects": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": { "$ref": "#/components/schemas/Subject" }
+          },
+          "totalScore": { "type": "integer", "minimum": 0, "maximum": 300, "example": 127 },
+          "passed": { "type": "boolean", "example": false }
+        }
+      },
+      "Subject": {
+        "type": "object",
+        "required": ["name", "score", "answers"],
+        "properties": {
+          "name": { "type": "string", "example": "Azərbaycan dili" },
+          "score": { "type": "integer", "minimum": 0, "maximum": 100, "example": 45 },
+          "answers": { "type": "string", "example": "ABCDABCDABCDABCDABCDABCDABCDAB" }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": ["code", "message"],
+            "properties": {
+              "code": { "type": "string", "example": "not_found" },
+              "message": { "type": "string", "example": "Nəticə tapılmadı. FIN kodunu yenidən yoxlayın." }
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "InvalidRequest": {
+        "description": "Yanlış sorğu və ya FIN formatı",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "NotFound": {
+        "description": "Nəticə tapılmadı",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "RateLimited": {
+        "description": "Sorğu limiti keçildi",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "ServiceUnavailable": {
+        "description": "Xidmət müvəqqəti əlçatan deyil",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      }
+    }
+  }
+}

@@ -24,7 +24,6 @@ type Config struct {
 	RateLimitWindow  time.Duration
 	CacheTTL         time.Duration
 	NegativeCacheTTL time.Duration
-	CORSOrigins      string
 }
 
 func Load() (Config, error) {
@@ -38,14 +37,13 @@ func Load() (Config, error) {
 		RedisURL:         strings.TrimSpace(os.Getenv("REDIS_URL")),
 		MaxDBConns:       32,
 		MinDBConns:       4,
-		DBTimeout:        180 * time.Millisecond,
-		RequestTimeout:   2 * time.Second,
+		DBTimeout:        time.Second,
+		RequestTimeout:   3 * time.Second,
 		MaxBodyBytes:     1024,
 		RateLimitMax:     60,
 		RateLimitWindow:  time.Minute,
 		CacheTTL:         15 * time.Minute,
 		NegativeCacheTTL: 30 * time.Second,
-		CORSOrigins:      valueOr("API_CORS_ORIGINS", "http://localhost:3000"),
 	}
 
 	if cfg.DatabaseURL == "" {

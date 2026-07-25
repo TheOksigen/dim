@@ -12,63 +12,29 @@ services:
     volumes:
       - redis_data:/data
 
-  migrate:
-    image: postgres:17-alpine
-    # This one-shot service exits successfully after applying the schema.
-    exclude_from_hc: true
-    # Coolify resolves this from its runtime .env during `docker compose up`.
-    # The empty default keeps the separate build command free of database secrets.
-    environment:
-      DATABASE_URL: ${DATABASE_URL:-}
-    volumes:
-      - ./apps/api/migrations:/migrations:ro
-    command:
-      - sh
-      - -ec
-      - |
-        if [ -z "$${DATABASE_URL:-}" ]; then
-          echo >&2 "DATABASE_URL must be configured as a Coolify Runtime Variable"
-          exit 1
-        fi
-        exec env PGCONNECT_TIMEOUT=5 psql -X -w -v ON_ERROR_STOP=1 "$$DATABASE_URL" -f /migrations/0001_exam_results.sql
-    restart: "no"
-
   api:
     build:
       context: ./apps/api
     depends_on:
-      migrate:
-        condition: service_completed_successfully
       redis:
         condition: service_healthy
     environment:
-      # See the migrate service above: this is a runtime-only value.
       DATABASE_URL: ${DATABASE_URL:-}
       APP_ENV: production
       HTTP_ADDR: :8080
       REDIS_URL: redis://redis:6379/0
       API_MAX_DB_CONNS: "32"
       API_MIN_DB_CONNS: "4"
-      API_DB_TIMEOUT: 180ms
-      API_REQUEST_TIMEOUT: 2s
+      # The configured PostgreSQL is external; 180ms is too short for a normal lookup round trip.
+      API_DB_TIMEOUT: 1s
+      API_REQUEST_TIMEOUT: 3s
       API_MAX_BODY_BYTES: "1024"
       API_RATE_LIMIT_MAX: "60"
       API_RATE_LIMIT_WINDOW: 1m
       API_CACHE_TTL: 15m
       API_NEGATIVE_CACHE_TTL: 30s
-      API_CORS_ORIGINS: https://${SERVICE_FQDN_WEB}
     ports:
       - "127.0.0.1:8080:8080"
-
-  web:
-    build:
-      context: ./apps/web
-    depends_on:
-      - api
-    environment:
-      RESULTS_API_URL: http://api:8080
-    ports:
-      - "3000:3000"
 
 volumes:
   redis_data:
