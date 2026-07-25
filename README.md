@@ -7,7 +7,7 @@ Bun ilə işləyən SSR Next.js interfeysi, Go Fiber hot-path API-si, xarici Pos
 ~~~sh
 cp .env.example .env
 # .env-də DATABASE_URL-ni əlçatan PostgreSQL instansına uyğunlaşdırın.
-docker compose up --build
+docker compose --env-file .env -f docker-compose.yml -f docker-compose.local.yml up --build
 ~~~
 
 Sistem ilk işə düşəndə sxem avtomatik tətbiq edilir. Sintetik məlumat ayrıca yüklənir; API startında heç vaxt seed edilmir:
@@ -16,17 +16,17 @@ Sistem ilk işə düşəndə sxem avtomatik tətbiq edilir. Sintetik məlumat ay
 
 ~~~sh
 # sürətli yoxlama üçün
-docker compose run --rm --entrypoint /app/seed api -total 10000
+docker compose --env-file .env -f docker-compose.yml -f docker-compose.local.yml run --rm --entrypoint /app/seed api -total 10000
 
 # tam test həcmi üçün
-docker compose run --rm --entrypoint /app/seed api -total 10000000 -batch-size 10000
+docker compose --env-file .env -f docker-compose.yml -f docker-compose.local.yml run --rm --entrypoint /app/seed api -total 10000000 -batch-size 10000
 ~~~
 
 İlk sintetik FIN `T000000` olur. Web: http://localhost:3000, API liveness: http://localhost:8080/healthz.
 
 ## Coolify və xarici PostgreSQL
 
-`DATABASE_URL` Coolify-də secret kimi təyin edilməlidir; repository-yə yazılmır. Dəyişəni yalnız **Runtime Variable** edin; Build Variable aktiv olmasın. Docker Compose servisi üçün **Connect to Predefined Network** seçimini aktiv edin ki, verilən PostgreSQL-in daxili host adı əlçatan olsun. `migrate` servisi həmin URL ilə `exam_results` cədvəlini idempotent şəkildə yaradır, API isə eyni bazaya read-only bağlantı qurur.
+`DATABASE_URL` Coolify-də secret kimi təyin edilməlidir; repository-yə yazılmır. Dəyişəni yalnız **Runtime Variable** edin; Build Variable aktiv olmasın. Coolify runtime secret-i `migrate` və API konteynerlərinə ötürür. Xarici PostgreSQL URL istifadə edilirsə, **Connect to Predefined Network** lazım deyil. `migrate` servisi həmin URL ilə `exam_results` cədvəlini idempotent şəkildə yaradır, API isə eyni bazaya read-only bağlantı qurur.
 
 ## Yoxlama
 
